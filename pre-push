@@ -1,0 +1,67 @@
+#!/bin/bash
+
+# Get the latest tag if available
+latest_tag=$(git describe --tags --abbrev=0 2>/dev/null)
+if [ -z "$latest_tag" ]; then
+    latest_tag="0.0.0"
+fi
+
+
+# Parse the version
+major=$(echo $latest_tag | cut -d. -f1)
+minor=$(echo $latest_tag | cut -d. -f2)
+patch=$(echo $latest_tag | cut -d. -f3)
+
+# Parse commit messages and determine the type of change
+while read -r line; do
+    case $line in
+        major*)
+            ((major++)); minor=0; patch=0
+            break ;;
+        minor*)
+            ((minor++)); patch=0
+            break ;;
+        patch*)
+            ((patch++))
+            break ;;
+        *)
+            ((patch++)) ;;
+    esac
+done < <(git log --pretty=%s origin/master..HEAD)
+
+# Update the version number
+new_version="$major.$minor.$patch"
+
+echo $new_version new
+echo $latest_tag old
+
+if [ "$new_version" == "$latest_tag" ]; then
+    echo "true"
+else
+    echo "Updating version to $new_version"
+
+    # Create a new tag on GitHub
+    git tag -a "$new_version" -m "Version $new_version"
+    git push origin "$new_version"
+fi
+
+# if [ "$new_version" -eq "$latest_tag" ]; then
+#     echo "No version change detected"
+# else
+#     echo "Updating version to $new_version"
+
+#     # Create a new tag on GitHub
+#     git tag -a "$new_version" -m "Version $new_version"
+#     git push origin "$new_version"
+# fi
+
+# Create a new tag on GitHub
+# if [ "$new_version" -eq "$latest_tag" ]; then
+#     echo "Updating version to $new_version"
+
+#     # Create a new tag on GitHub
+#     git tag -a "$new_version" -m "Version $new_version"
+#     git push origin "$new_version"
+# else
+#     echo "No version change detected"
+# fi
