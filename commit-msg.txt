@@ -1,0 +1,50 @@
+#!/bin/bash
+
+# Get the latest tag if available
+latest_tag=$(git describe --tags --abbrev=0 2>/dev/null)
+if [ -z "$latest_tag" ]; then
+    latest_tag="0.0.0"
+fi
+
+
+# Parse the version
+major=$(echo $latest_tag | cut -d. -f1)
+minor=$(echo $latest_tag | cut -d. -f2)
+patch=$(echo $latest_tag | cut -d. -f3)
+
+commit_message=$(cat .git/COMMIT_EDITMSG)
+
+echo $commit_message
+# Parse commit messages and determine the type of change
+case $commit_message in
+    major*)
+        ((major++)); minor=0; patch=0 ;;
+    minor*)
+        ((minor++)); patch=0 ;;
+    patch*)
+        ((patch++)) ;;
+    *)
+        ((patch++)) ;;
+esac
+
+# Update the version number
+new_version="$major.$minor.$patch"
+
+echo $new_version
+
+# echo $new_version new
+# echo $latest_tag old
+
+# Add the version to commit
+# sed -i.bak -e "1s/^/$new_version /" "$1" # to put the version at the beggining
+# sed -i.bak -e "\$a$new_version" "$1" # to put the version at the end (new line)
+sed -i.bak -e "\$s/\$/ $new_version/" "$1" # to put the version at the end
+
+# Remove the type of version from commit message
+WORDS="patch minor major"
+
+for word in $WORDS; do
+    sed -i.bak -e "1s/^$word //" "$1"
+done
+
+git tag -a "$new_version" -m "Version $new_version"
